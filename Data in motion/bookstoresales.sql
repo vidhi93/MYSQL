@@ -75,7 +75,7 @@ VALUES
   select * from order_items;
   select * from customers;
   select * from books;
-  
+  select * from customers c join orders o on o.customer_id = c.customer_id;
   /*  Retrieve all books with a price greater than $10. */
   select title,price
   from books
@@ -92,3 +92,39 @@ VALUES
   join books b on b.book_id = oi.book_id
   order by oi.quantity DESC
   limit 3;
+  
+  /* Find the average price of books in the Fiction genre.*/
+  select avg(price) as avg_price
+  from books
+  where genre = 'Fiction';
+  
+  /*Retrieve the names of customers who have placed orders. */
+  select c.name
+  from customers c
+  join orders o on o.customer_id = c.customer_id;
+  
+  /*Find the total revenue generated from book sales. */
+  select sum(total_amount)
+  from orders;
+  
+  /*Retrieve the books with titles containing the word “and” (case-insensitive). */
+  select title
+  from books
+  where title like '%and%';
+  
+  /* Find the customers who have placed orders worth more than $50.*/
+  select c.name
+  from customers c
+  join orders o on c.customer_id = o.customer_id
+  where o.total_amount > 50;
+  
+  /* Retrieve the book titles and their corresponding authors sorted in alphabetical order by author.*/
+  select title,author
+  from books
+  order by author;
+  
+  /* Find the customers who have not placed any orders.*/
+  select c.name
+  from customers c
+  left join orders o on o.customer_id = c.customer_id
+  where c.customer_id is null;
