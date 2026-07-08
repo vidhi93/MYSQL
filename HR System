@@ -1,0 +1,238 @@
+Schema for the database tables
+
+
+
+
+
+
+
+
+
+Return the complete employee roster from the employees table.
+SELECT * FROM employees;
+
+Return each unique department name from the departments table.
+SELECT DISTINCT department_name
+FROM departments
+
+Return employees earning more than $80,000.
+SELECT first_name,last_name,salary
+FROM employees
+WHERE salary >80000
+
+List employees from highest salary to lowest salary.
+SELECT first_name,last_name,salary
+FROM employees
+ORDER BY salary DESC
+
+Return employees assigned to the IT or Marketing departments.
+SELECT first_name,last_name,department_id
+FROM employ
+ees
+WHERE department_id = 10 OR department_id = 40
+
+Return employees who are not assigned to the IT department.
+SELECT first_name,last_name,department_id
+FROM employees
+WHERE department_id IN('20','30','40')
+
+Return employees whose manageSELECT first_name,last_name,manager_id
+FROM employees
+WHERE manager_id IS NULLr_id is NULL.
+
+Return the top 3 highest-paid employees.
+SELECT first_name,last_name,salary
+FROM employees
+ORDER BY salary DESC
+LIMIT 3
+
+Count the total number of employees.
+SELECT COUNT(employee_id) AS total_employees
+FROM employees
+
+Return the minimum and maximum salary values across all employees.
+SELECT MIN(salary) AS min_salary,MAX(salary) AS max_salary
+FROM employees
+
+Calculate the total salary expenditure across all employees.
+SELECT SUM(salary) AS total_salary
+FROM employees
+
+Calculate the average salary across all employees.
+SELECT AVG(salary)
+AS average_salary
+FROM employees
+
+Return employees whose first name starts with the letter A.
+SELECT first_name,last_name
+FROM employees
+WHERE first_name LIKE 'A%'
+
+Return employees who work in the IT or HR department using the IN operator.
+SELECT first_name,last_name,department_id
+FROM employees
+WHERE department_id IN ('10','20')
+
+Return employees with salaries between $60,000 and $90,000.
+SELECT first_name,last_name,salary
+FROM employees
+WHERE salary BETWEEN 60000 AND 90000
+
+Build an employee summary report with readable alias names.
+SELECT employee_id AS 'Employee Number',concat(first_name,' ',last_name) AS 'Full Name',salary AS 'Annual Salary',hire_date AS 'Start Date'
+FROM employees
+ORDER BY salary DESC
+
+Create a single combined result set of employees and managers.
+SELECT first_name,last_name,'Employee' AS role
+FROM employees
+UNION
+SELECT first_name,last_name,'Manager' AS role
+FROM employees
+WHERE manager_id IS NULL
+ORDER BY last_name
+
+Return each employee with the name of their department.
+SELECT e.first_name,e.last_name,d.department_name
+FROM employees e JOIN departments d on d.department_id = e.department_id
+
+Count employees in each department.
+SELECT d.department_name,COUNT(e.employee_id) AS employee_count
+FROM employees e  Full JOIN departments d on d.department_id =e.department_id 
+GROUP BY d.department_name
+
+Return departments that currently have more than 1 employee.
+SELECT d.department_name,COUNT(e.employee_id) AS employee_count
+FROM employees e JOIN departments d on d.department_id = e.department_id
+GROUP BY d.department_name
+HAVING employee_count > 1
+
+Return all departments and any employees currently assigned to them.
+SELECT d.department_name,d.location,e.first_name,e.last_name
+FROM employees e Full JOIN departments d on d.department_id = e.department_id
+ORDER BY d.department_name,e.first_name
+
+Return employees earning more than the average salary in their department.
+SELECT e.first_name,e.last_name,e.salary,d.department_name
+FROM employees e JOIN departments d on d.department_id = e.department_id 
+WHERE e.salary > (SELECT AVG(e1.salary) FROM employees e1   where e.department_id = e1.department_id GROUP BY e1.department_id)
+
+Return each employee with their full name, job title, and department name.
+SELECT e.first_name,e.last_name,j.job_title,d.department_name
+FROM employees e JOIN departments d on e.department_id =d.department_id 
+                JOIN jobs j on j.job_id = e.job_id 
+ORDER BY e.last_name
+
+Return each employee with their manager first name, using a readable fallback for employees without a manager.
+SELECT e.first_name,e.last_name,COALESCE(m.first_name,'No Manager') AS manager_name
+FROM employees e LEFT JOIN employees m on e.manager_id = m.employee_id
+ORDER BY e.first_name
+
+Return employees hired on or after January 1, 2021 with their hire year.
+SELECT first_name,last_name,hire_date,strftime('%Y', hire_date) AS hire_year
+FROM employees
+WHERE hire_date >= '2021-01-01'
+ORDER BY hire_year ASC
+
+Rank every employee by salary across the entire company.
+SELECT first_name,last_name,salary,RANK() OVER(ORDER BY salary DESC) AS salary_rank
+FROM employees
+
+Return the employee with the highest salary using a subquery with EXISTS.
+SELECT e.first_name,e.last_name,e.salary
+FROM employees e
+WHERE NOT EXISTS(SELECT 1 FROM employees e1 WHERE e1.salary > e.salary)
+
+Classify each employee as Senior, Mid-Level, or Junior based on salary and show their manager’s first name.
+SELECT e.first_name,e.last_name,e.salary,CASE WHEN e.salary >= 120000 THEN 'Senior'
+                                        WHEN e.salary >= 70000 THEN 'Mid-Level'
+                                        ELSE 'Junior'
+                                        END AS Level,m.first_name AS manager_name
+FROM employees e Left JOIN employees m on m.employee_id = e.manager_id
+ORDER BY e.salary DESC
+
+Rank employees by salary within each department and show both rank and row position.
+SELECT e.first_name,e.last_name,d.department_name,e.salary,RANK() OVER(PARTITION BY d.department_id ORDER BY e.salary DESC) AS salary_rank,ROW_NUMBER() OVER(PARTITION BY d.department_id ORDER BY e.salary DESC) AS row_num
+FROM employees e JOIN departments d on d.department_id = e.department_id
+
+Use a CTE to return the top earner in every department.
+WITH HighestSal AS (
+       SELECT MAX(salary) AS Max_Sal,department_id FROM employees
+       GROUP BY department_id
+)
+SELECT e.first_name,e.last_name,d.department_name,e.salary
+FROM employees e JOIN departments d on d.department_id = e.department_id
+                JOIN HighestSal HS on HS.department_id = d.department_id AND HS.MAX_Sal = e.salary
+ORDER BY e.salary DESC
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
