@@ -1,0 +1,322 @@
+Return the complete customer roster from the customers table.
+SELECT * 
+FROM customers
+
+Return products that cost more than $100.
+SELECT product_name,price
+FROM products
+WHERE price > 100
+
+Return all products ordered by price descending.
+SELECT product_name,price
+FROM products
+ORDER BY price DESC
+
+Return customers from the USA.
+SELECT first_name,last_name,city
+FROM customers
+WHERE country = 'USA'
+
+Count the total number of products.
+SELECT COUNT(product_id) AS total_products
+FROM products
+
+Calculate the average price across all products.
+SELECT AVG(price) AS average_price
+FROM products
+
+Return products that belong to the Electronics category.
+SELECT p.product_name,p.price
+FROM products p JOIN categories c on c.category_id = p.category_id
+WHERE c.category_name = 'Electronics'
+
+Return orders with a delivered status.
+SELECT order_id,customer_id,total_amount
+FROM orders 
+WHERE status = 'delivered'
+ORDER BY ORDER_id ASC
+
+Return products with stock quantities greater than 50.
+SELECT product_name,stock_quantity
+FROM products
+WHERE stock_quantity > 50  
+
+Return June 2023 orders and calculate how many days ago each order was placed as of 2023-07-01.
+SELECT ORDER_id,customer_id,order_date,total_amount,status,DateDIFF('2023-07-01',ORDER_date) AS days_ago
+FROM orders
+ORDER BY ORDER_id ASC
+
+Return each unique country with at least one registered customer.
+SELECT DISTINCT(country)
+FROM customers
+ORDER BY country ASC
+
+Return customers who registered between January 1 and March 31, 2023.
+SELECT first_name,last_name,registration_date,country
+FROM customers
+WHERE registration_date BETWEEN '2023-01-01' AND '2023-03-31'
+ORDER BY registration_date
+
+Return customers who have not provided their city.
+SELECT first_name,last_name,email,registration_date
+FROM customers
+WHERE city IS NULL
+ORDER BY registration_date
+
+Return customer names together with their order information.
+SELECT c.first_name,c.last_name,o.order_id,o.total_amount,o.status
+FROM customers c JOIN orders o on o.customer_id = c.customer_id 
+ORDER BY o.status ASC
+
+Count the number of orders per customer.
+SELECT c.first_name,c.last_name,COUNT(order_id) AS order_count
+FROM customers c left JOIN ORDERs o on o.customer_id = c.customer_id
+GROUP BY c.first_name,c.last_name
+ORDER BY order_count DESC
+
+Return products together with their category names.
+SELECT p.product_name,c.category_name,p.price
+FROM products p JOIN categories  c on c.category_id = p.category_id 
+
+Return categories with more than $200 in revenue.
+SELECT c.category_name,SUM(oi.quantity * oi.unit_price) AS total_revenue
+FROM categories c JOIN products p on p.category_id = c.category_id 
+                   JOIN order_items oi on oi.product_id = p.product_id
+GROUP BY c.category_name
+HAVING total_revenue > 200
+
+Return products that have never appeared in any order.
+SELECT p.product_name,p.price,p.stock_quantity 
+FROM products p LEFT JOIN order_items oi on oi.product_id = p.product_id 
+WHERE oi.product_id IS NULL
+ORDER BY p.price DESC 
+
+Return non-Electronics products priced below the most expensive Electronics item.
+SELECT p.product_name,p.price,c.category_name
+FROM products p JOIN categories c on c.category_id = p.category_id
+WHERE p.price < (SELECT MAX(p1.price) FROM products p1 WHERE p1.category_id = 1) AND p.category_id != 1
+ORDER BY p.price
+
+Return every order item with the customer name, category name, product name, quantity, and unit price.
+SELECT c.first_name,c.last_name,ca.category_name,p.product_name,oi.quantity,oi.unit_price
+FROM customers c JOIN ORDERs o on o.customer_id = c.customer_id 
+                  JOIN ORDER_items oi on oi.ORDER_id = o.ORDER_id 
+                  JOIN products p on p.product_id = oi.product_id 
+                  JOIN categories ca on ca.category_id = p.category_id
+ORDER BY c.last_name,ca.category_name ASC
+
+Return all customers with their order status, replacing missing order status values with a readable label.
+SELECT c.first_name,c.last_name,c.country,COALESCE(o.status,'No Orders') AS ORDER_status , o.total_amount
+FROM customers c LEFT JOIN ORDERs o on o.customer_id = c.customer_id
+ORDER BY c.last_name
+
+Combine fulfilled and pending orders into one labeled result set.
+SELECT ORDER_id,customer_id,status,total_amount,CASE WHEN status IN ('delivered','shipped') THEN 'Fulfilled' END AS urgency
+FROM orders 
+WHERE status IN ('delivered','shipped')
+UNION ALL
+SELECT ORDER_id,customer_id,status,total_amount,CASE WHEN status = 'pending' THEN 'Action Required' END AS urgency
+FROM orders 
+WHERE status = 'pending'
+ORDER BY urgency ASC,order_id
+
+Rank all products by price across the entire catalog.
+SELECT product_name,price,RANK() OVER(ORDER BY price DESC) AS price_rank
+FROM products 
+ORDER BY price_rank ASC
+
+
+Return the top customer by total spending using a subquery.
+SELECT c.first_name,c.last_name,(o.total_amount) AS total_spent
+FROM customers c JOIN ORDERs o on o.customer_id = c.customer_id
+WHERE o.total_amount = (SELECT MAX(total_amount) FROM orders)
+
+For every customer, calculate order count, total spend, delivered spend, and assign a customer tier.
+SELECT c.first_name,c.last_name,c.country,COUNT(o.ORDER_id) AS total_orders,SUM(o.total_amount) AS total_spent,
+CASE WHEN sum(o.total_amount) > 1100 THEN 'VIP' ELSE 'Regular' END AS customer_tier,sum(CASE WHEN o.status = 'delivered' THEN o.total_amount ELSE 0 END) AS delivered_value
+FROM customers c LEFT JOIN ORDERs o on o.customer_id = c.customer_id 
+GROUP BY c.customer_id,c.first_name,c.last_name,c.country
+ORDER BY total_spent DESC
+
+Rank customers by total spending and assign percentile-style tiers.
+SELECT
+  c.first_name,
+  c.last_name,
+  c.country,
+  total_spent,
+  NTILE (3) OVER (
+    ORDER BY
+      total_spent DESC
+  ) AS spending_tier,
+  PERCENT_RANK() OVER (
+    ORDER BY
+      total_spent
+  ) AS percentile_rank
+FROM
+  (
+    SELECT
+      c.customer_id,
+      c.first_name,
+      c.last_name,
+      c.country,
+      COALESCE(SUM(o.total_amount), 0) AS total_spent
+    FROM
+      customers c
+      LEFT JOIN orders o ON c.customer_id = o.customer_id
+    GROUP BY
+      c.customer_id,
+      c.first_name,
+      c.last_name,
+      c.country
+  ) c
+ORDER BY
+  total_spent DESC;
+
+Use a CTE to find the highest-priced product in each category.
+   
+   With highestcategory AS (
+   SELECT p.product_name,c.category_name ,MAX(p.price) AS price,RANK() OVER(PARTITION BY c.category_name ORDER BY MAX(p.price) DESC ) AS RANKing
+   FROM products p JOIN categories c on c.category_id = p.category_id
+   GROUP BY p.product_name,c.category_name
+   ORDER BY p.price DESC
+)
+SELECT product_name,category_name,price
+FROM highestcategory
+WHERE RANKing = 1
+
+Rank products by price within their own category.
+SELECT p.product_name,c.category_name,p.price,RANK() OVER(PARTITION BY c.category_id ORDER BY p.price DESC) AS price_rank
+FROM products p JOIN categories c on c.category_id = p.category_id 
+ORDER BY c.category_name,price_rank
+
+Return products priced above the average price of their own category.
+WITH CTE AS (
+SELECT p.product_name,c.category_name,p.price,Round(AVG(p.price) OVER(PARTITION BY c.category_name))AS avgprice,RANK() OVER(PARTITION BY c.category_name ORDER BY p.price DESC)
+  FROM products p JOIN categories c on c.category_id = p.category_id 
+  GROUP BY p.product_name,c.category_name,p.price
+
+)
+SELECT product_name,category_name,price
+FROM CTE 
+WHERE price > avgprice
+ORDER BY price DESC
+
+Return the top 5 products by total revenue.
+SELECT p.product_name,c.category_name,SUM(oi.quantity) AS total_qty_sold,SUM(oi.quantity * oi.unit_price) AS total_revenue 
+FROM products p JOIN categories c on c.category_id = p.category_id 
+                JOIN order_items oi on p.product_id = oi.product_id 
+GROUP BY p.product_name,c.category_name
+ORDER BY total_revenue DESC
+LIMIT 5
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
