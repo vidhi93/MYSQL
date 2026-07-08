@@ -1,3 +1,4 @@
+# HR Database
 
 Return the complete employee roster from the employees table.
 SELECT * FROM employees;
