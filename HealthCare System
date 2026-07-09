@@ -1,0 +1,361 @@
+Return the complete patient roster from the patients table.
+SELECT * 
+FROM patients
+
+Return all department names and their locations.
+SELECT department_name,location 
+FROM departments
+
+Return doctors assigned to the Cardiology department.
+SELECT first_name,last_name,specialty
+FROM doctors
+WHERE specialty = 'Cardiologist'
+
+Return all female patients with their contact information.
+SELECT first_name,last_name,phone 
+FROM patients
+WHERE gender = 'F'
+
+Return all doctors sorted by hire date from oldest to most recent.
+SELECT first_name,last_name,hire_date
+FROM doctors
+ORDER BY hire_date ASC;
+
+Return all appointments with a Completed status.
+SELECT appointment_id,patient_id,appointment_date
+FROM appointments
+WHERE status = 'Completed'
+
+Count the total number of doctors on staff.
+SELECT COUNT(doctor_id) AS total_doctors
+FROM doctors
+
+Return all diagnoses recorded in the year 2025.
+SELECT d.condition_name,d.diagnosis_date,p.last_name
+FROM patients p JOIN diagnoses d on d.patient_id = p.patient_id 
+WHERE d.diagnosis_date BETWEEN'2025-01-01' AND '2025-12-31'
+ORDER BY diagnosis_date
+
+Count appointments per year using strftime to extract the year from appointment_date. Show year and appointment_count. Order by year.
+SELECT strftime('%Y',appointment_date) AS year,COUNT(appointment_id) AS appointment_count
+FROM appointments
+GROUP BY year
+
+
+Show the number of distinct diagnoses per patient. Join patients to diagnoses. Show first name, last name, and diagnosis_count. Order by count descending.
+SELECT p.first_name,p.last_name,COUNT(DISTINCT(d.diagnosis_id)) AS diagnosis_count
+FROM patients p JOIN diagnoses d on d.patient_id = p.patient_id 
+GROUP BY p.first_name,p.last_name
+ORDER BY diagnosis_count DESC
+
+Find distinct patients who have at least one appointment in 2025. Use strftime to extract the year. Show first name and last name ordered by last name.
+SELECT DISTINCT
+  p.first_name,
+  p.last_name
+FROM
+  patients p
+
+  JOIN appointments a ON p.patient_id = a.patient_id
+WHERE
+  DATE_FORMAT (a.appointment_date, '%Y') = '2025'
+ORDER BY
+  p.last_name;
+
+The analytics team wants to know what gender values exist in the patient database. List the distinct gender values from the patients table.
+SELECT DISTINCT(gender)
+FROM patients
+
+The scheduling team needs to review all appointments booked during a two-week window. 
+Find all appointments with appointment_date between January 15, 2025 and January 20, 2025 (inclusive). Show appointment_id, patient_id, appointment_date, and status.
+SELECT appointment_id,patient_id,appointment_date,status
+FROM appointments 
+WHERE appointment_date BETWEEN '2025-01-15' AND '2025-01-20'
+
+Count the number of appointments per patient.
+SELECT patient_id ,COUNT(appointment_id) AS appointment_count
+FROM appointments
+GROUP BY patient_id
+ORDER BY patient_id
+
+Return each doctor's name paired with their department name.
+SELECT d.first_name,d.last_name,de.department_name
+FROM doctors d JOIN departments de on de.department_id = d.department_id 
+
+Return each diagnosis with the patient's first name, last name, condition name, and diagnosis date.
+SELECT p.first_name,p.last_name,d.condition_name,d.diagnosis_date
+FROM patients p JOIN diagnoses d on d.patient_id = p.patient_id 
+ORDER BY diagnosis_date
+
+Return all scheduled appointments with patient and doctor full names.
+SELECT a.appointment_date,CONCAT(p.first_name,' ', p.last_name) AS patient_name,CONCAT(d.first_name,' ', d.last_name) AS doctor_name
+FROM appointments a JOIN patients p on p.patient_id = a.patient_id 
+                    JOIN doctors d on d.doctor_id = a.doctor_id 
+WHERE a.status = 'Scheduled'
+ORDER BY a.appointment_date
+
+Return the number of doctors in each department.
+SELECT de.department_name,COUNT(doctor_id) AS doctor_count
+FROM departments de LEFT JOIN doctors d on d.department_id = de.department_id
+GROUP BY de.department_name
+ORDER BY de.department_name
+
+Return patients who have more than one recorded diagnosis.
+SELECT patient_id,COUNT(diagnosis_id) AS diagnosis_count
+FROM diagnoses 
+GROUP BY patient_id 
+HAVING diagnosis_count > 1
+
+Return each appointment's date, patient last name, and the department of the attending doctor.
+SELECT a.appointment_date,p.last_name AS patient_last_name,de.department_name
+FROM appointments a JOIN patients p on p.patient_id = a.patient_id 
+                    JOIN doctors d on d.doctor_id = a.doctor_id 
+                    JOIN departments de on de.department_id = d.department_id 
+ORDER BY a.appointment_date,patient_last_name
+
+The hospital audit team needs a complete view of every appointment. Show full appointment details including patient name, doctor name, department name, appointment date, and status.
+Order by appointment date.
+SELECT p.first_name,p.last_name,d.first_name AS dr_first,d.last_name AS dr_last,de.department_name,a.appointment_date,a.status
+FROM patients p JOIN appointments a on a.patient_id = p.patient_id 
+                JOIN doctors d on d.doctor_id = a.doctor_id 
+                JOIN departments de on de.department_id = d.department_id 
+        ORDER BY a.appointment_date
+
+The admissions team wants to know which registered patients have never had an appointment scheduled. Find patients who have no appointment records. Show first name, last name, and gender.
+SELECT p.first_name,p.last_name,p.gender
+FROM patients p left JOIN appointments a on a.patient_id = p.patient_id
+WHERE a.appointment_id IS NULL
+
+Create a unified appointment list by combining Scheduled (labelled 'Upcoming') and Completed (labelled 'Past') appointments. 
+Show patient_id, doctor_id, appointment_date, and category. Order by appointment_date.
+SELECT patient_id,doctor_id,appointment_date,CASE WHEN status = 'Scheduled' THEN 'Upcoming'
+                                                   WHEN status = 'Completed' THEN 'Past' END AS category
+FROM appointments
+WHERE status NOT IN ('Cancelled')
+ORDER BY appointment_date
+
+The clinical team wants to identify patients who have never received a diagnosis. Find all patients who have no records in the diagnoses table. Show first name, last name, and gender.
+SELECT p.first_name,p.last_name,p.gender
+FROM patients p LEFT JOIN diagnoses d on d.patient_id = p.patient_id 
+WHERE d.diagnosis_id IS NULL
+
+Generate a patient summary report showing every registered patient alongside how many diagnoses they have received, including patients with zero diagnoses. 
+Show first name, last name, and diagnosis_count. Order by diagnosis_count descending, then last name.
+SELECT p.first_name,p.last_name,COUNT(d.diagnosis_id) AS diagnosis_count
+FROM patients p Left JOIN diagnoses d on d.patient_id = p.patient_id 
+GROUP BY p.first_name,p.last_name
+ORDER BY diagnosis_count DESC,p.last_name
+
+Find doctors who have more appointments than the average number of appointments for all doctors in their department. Show first name, last name, specialty, and appointment count.
+WITH doctor_counts AS (
+    SELECT
+        d.doctor_id,
+        d.first_name,
+        d.last_name,
+        d.specialty,
+        d.department_id,
+        COUNT(a.appointment_id) AS appt_count
+    FROM doctors d
+    JOIN appointments a ON d.doctor_id = a.doctor_id
+    GROUP BY d.doctor_id, d.first_name, d.last_name, d.specialty, d.department_id
+),
+dept_avg AS (
+    SELECT department_id, AVG(appt_count) AS avg_count
+    FROM doctor_counts
+    GROUP BY department_id
+)
+SELECT dc.first_name, dc.last_name, dc.specialty, dc.appt_count
+FROM doctor_counts dc
+JOIN dept_avg da ON dc.department_id = da.department_id
+WHERE dc.appt_count > da.avg_count
+ORDER BY dc.appt_count DESC;
+
+Rank each doctor by their appointment count within their department. Show first name, last name, department_id, appt_count, and dept_rank. Order by department, then rank.
+SELECT d.first_name,d.last_name,d.department_id,COUNT(a.appointment_id) AS appt_count,RANK() OVER(PARTITION BY d.department_id ORDER BY COUNT(a.appointment_id)DESC) AS dept_rank
+FROM appointments a JOIN doctors d on d.doctor_id = a.doctor_id
+GROUP BY d.first_name,d.last_name,d.department_id
+ORDER BY d.department_id,dept_rank
+
+
+Find the doctor with the most appointments in each department. Show doctor name, department name, and appointment count.
+with findrank AS(
+  SELECT d.first_name,d.last_name,de.department_name,COUNT(a.appointment_id) AS appt_count,RANK() OVER(PARTITION BY de.department_name ORDER BY COUNT(a.appointment_id)DESC) AS ranking
+FROM departments de JOIN doctors d on d.department_id = de.department_id
+                    JOIN appointments a on a.doctor_id = d.doctor_id
+GROUP BY d.first_name,d.last_name,de.department_name
+ORDER BY ranking DESC
+)
+SELECT first_name,last_name,department_name,appt_count
+FROM findrank fr
+WHERE fr.ranking =1;
+
+Classify patients into age groups based on their age as of 2026-01-01: Young Adult (under 35), Middle-Aged (35–49), Senior (50+). Show each group's patient count and average age. Order by avg_age ascending.
+WITH
+  patient_ages AS (
+    SELECT
+      patient_id,
+      first_name,
+      last_name,
+      (
+        DATE_FORMAT ('2026-01-01', '%Y') - DATE_FORMAT (date_of_birth, '%Y')
+      ) AS age
+    FROM
+      patients
+  )
+SELECT
+  CASE
+    WHEN age < 35 THEN 'Young Adult'
+    WHEN age < 50 THEN 'Middle-Aged'
+    ELSE 'Senior'
+  END AS age_group,
+  COUNT(*) AS patient_count,
+  ROUND(AVG(age), 1) AS avg_age
+FROM
+  patient_ages
+GROUP BY
+  age_group
+ORDER BY
+  avg_age;
+
+The operations team wants to flag doctors who are busier than the hospital average. 
+Find doctors whose appointment count exceeds the hospital-wide average appointment count per doctor. Show first name, last name, specialty, and appointment count.
+with countapp as (
+  SELECT d.first_name,d.last_name,d.specialty,COUNT(a.appointment_id) AS appt_count
+FROM doctors d JOIN appointments a on a.doctor_id = d.doctor_id 
+GROUP BY d.first_name,d.last_name,d.specialty
+)
+SELECT first_name,last_name,specialty,appt_count
+FROM countapp
+WHERE appt_count > (SELECT AVG(appt_count) FROM countapp)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
